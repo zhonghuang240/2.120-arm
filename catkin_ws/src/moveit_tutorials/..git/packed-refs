@@ -1,0 +1,6 @@
+# pack-refs with: peeled fully-peeled sorted 
+4e9718bbcdd5be1f56e61306ebf2861bea0c9034 refs/remotes/origin/gh-pages
+6dd72db97d3f044695ff1263bf2fb11e2d41fd0f refs/remotes/origin/indigo-devel
+b6bb2252d4c518d53195e97e5a5ad0317045092c refs/remotes/origin/kinetic-devel
+da2b0e62db1137e328735f1b7cb12da7e057b482 refs/remotes/origin/master
+9e2622861cf9e4373b93169a4a7bb853ed3b04d3 refs/remotes/origin/melodic-devel

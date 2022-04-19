@@ -1,0 +1,38 @@
+Instructions to run the UR5
+
+If plug ethernet into wall/ IP address changed. Need to update ROS_MASTER_URI and ROS_IP in bashrc file
+
+nano ~/.bashrc
+
+Run the folowing command in every terminal tab.
+
+Make sure wired connection is on
+
+source ~/catkin_ws/devel/setup.bash
+
+
+Run each of the following commands in differnt terminal tabs.
+
+roslaunch ur_robot_driver ur5e_bringup.launch robot_ip:=192.168.0.100 kinematics_config:='/home/ur5/Documents/my_robot_calibration.yaml' 
+
+roslaunch ur5_e_moveit_config ur5_e_moveit_planning_execution.launch
+
+roslaunch ur5_e_moveit_config demo.launch
+
+roslaunch realsense2_camera rs_camera.launch camera:=cam_1 serial_no:=950122070633
+
+Overhead camera Device Serial No: 926522071077
+Side camera Device Serial No: 926522070006
+
+
+To find gripper ID: 
+dmesg | grep ttyUSB
+lsusb
+
+sudo chmod 777 /dev/ttyUSB1
+rosrun robotiq_2f_gripper_control Robotiq2FGripperRtuNode.py /dev/ttyUSB1
+
+rosrun moveit_tutorials move_group_python_interface_tutorial.py
+
+rosrun moveit_tutorials move_group_python_interface_tutorial_w_gripper_wo_custom_topic.py 
+

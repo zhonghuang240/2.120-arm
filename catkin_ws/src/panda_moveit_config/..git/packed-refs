@@ -1,0 +1,9 @@
+# pack-refs with: peeled fully-peeled sorted 
+5c97a61e9e8a02ca7f1fe08df48ac4ff1b03871a refs/remotes/origin/kinetic-devel
+27756a1f5a174f58b644e3670246b31a707ba828 refs/remotes/origin/melodic-devel
+3a1e58db644d3f61634bf9802c133f391b7be61b refs/tags/0.7.0
+5ffa8396f1b3cf6ea775fd8653c266f4aea199db refs/tags/0.7.1
+d36100ab153b82e23251e144b6a4c84c8c9384ba refs/tags/0.7.2
+4a16a4fcdbf5cc7975937faa1b0ebcf8d41b365d refs/tags/0.7.3
+96f426caf6c710592b64eca23b16a01f831b2468 refs/tags/0.7.4
+27756a1f5a174f58b644e3670246b31a707ba828 refs/tags/0.7.5

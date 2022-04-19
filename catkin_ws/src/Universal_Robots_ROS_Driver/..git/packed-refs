@@ -1,0 +1,7 @@
+# pack-refs with: peeled fully-peeled sorted 
+3cb33d0099a19d539004c3b99fd1161822be8117 refs/remotes/origin/beta-testing
+61ff0c657170ced9324318643d55a29f5a80245f refs/remotes/origin/change_wrong_ip
+98e0d87234cdbd75736c0a30b817cd4ec34bc469 refs/remotes/origin/master
+0250cdd2057568f51b8ade0460518f15705eafb3 refs/remotes/origin/ros_as_a_service
+497e64e8cdc5710a0041808d7116adbd2b586a1f refs/remotes/origin/startup_checks
+294c67fa87f92510688908e4d24ad0ddee5fc0e7 refs/remotes/origin/testing_scripts
