@@ -1,5 +1,5 @@
 import time
-#import serial
+import serial
 import numpy as np
 import geometry_msgs.msg
 import sys
@@ -43,6 +43,18 @@ class Arm(object):
         self.Ry_OFFSET = 0
         self.Rz_OFFSET = 0
 
+        # stacking offsets
+        self.STACK_X_OFFSET_VALUE = 50
+        self.STACK_Y_OFFSET_VALUE = 50
+        self.STACK_Z_OFFSET_VALUE = 30
+        self.stack_x_offset = 0
+        self.stack_y_offset = 0
+        self.stack_z_offset = 0
+
+        # gripping offsets
+        self.GRIP_Z_OFFSET_VALUE = 150
+        self.grip_z_offset = 0
+
         # Z rotation values for x axis direction and y axis direction
         self.RZ_X_AXIS = np.pi * (1/4)  # down table
         self.RZ_Y_AXIS = np.pi * (3/4) # across table
@@ -65,7 +77,9 @@ class Arm(object):
         self.state_first_run = True
 
         # arduino
-        self.arduino = serial.Serial(COM_port, 9800, timeout=1)
+        # self.arduino = serial.Serial('COM3', 115200, timeout=1)
+        # self.arduino.flushInput()
+        # self.arduino.flushOutput()
         self.grip_state = False
         self.force_reading = 0 # load cell reading
 
@@ -79,9 +93,9 @@ class Arm(object):
     def state_step(self, next_state):
         self.prev_state = self.state
         self.state = next_state
-        print(self.state)
         self.state_start_time = time.time()
         self.state_first_run = True
+        print(self.state)
 
     def read_arduino(self):
     # read grip state
@@ -191,9 +205,9 @@ class Arm(object):
 
     def pose_from_list(self, pose_list):
         wpose = geometry_msgs.msg.Pose()
-        wpose.position.x = pose_list[0] /1000
-        wpose.position.y = pose_list[1] /1000
-        wpose.position.z = pose_list[2] /1000
+        wpose.position.x = pose_list[0] / 1000 # convert mm to m
+        wpose.position.y = pose_list[1] / 1000
+        wpose.position.z = pose_list[2] / 1000
         wpose.orientation.x = pose_list[3]
         wpose.orientation.y = pose_list[4]
         wpose.orientation.z = pose_list[5]
@@ -259,10 +273,31 @@ class Arm(object):
             # orient gripper along length of brick
             # if gripper in correct location, set state to DESCEND_GRIP
                 if time.time() >= self.state_start_time + 10:
-                    #self.state_step('MOVE_Z_GRIP')
+                    #self.state_step('MOVE_Z_GRIP_1')
                     pass
 
-            elif self.state == "MOVE_Z_GRIP":
+            elif self.state == "MOVE_Z_GRIP_1":
+            # descend gripper to brick to be picked up
+                if self.state_first_run:
+
+                    # self.x = self.x
+                    # self.y = self.y
+                    # self.z =
+                    # self.Rx = self.Rx
+                    # self.Ry = self.Ry
+                    # self.Rz = self.Rz
+                    # pose = [self.x, self.y ,self.z] + self.get_quaternion_from_euler(self.Rx, self.Ry, self.Rz)
+                    # self.send_arm_pose_cmd(pose)
+
+                    self.state_first_run = False
+            # slow descent when near brick
+            # if gripper experiences significant load without limit switches being pressed, ERROR, stop
+            # stop descent when limit switches depressed, check grip is engaged
+                if time.time() >= self.state_start_time + 10:
+                    #self.state_step('MOVE_Z_GRIP_2')
+                    pass
+
+            elif self.state == "MOVE_Z_GRIP_2":
             # descend gripper to brick to be picked up
                 if self.state_first_run:
 
@@ -289,7 +324,7 @@ class Arm(object):
 
                     # self.x = self.x
                     # self.y = self.y
-                    # self.z = self.HOME_POSITION[2]
+                    # self.z = self.HOME_POSITION[2] * 1000
                     # self.Rx = self.Rx
                     # self.Ry = self.Ry
                     # self.Rz = self.Rz
@@ -299,27 +334,27 @@ class Arm(object):
                     self.state_first_run = False
             # if switches still pressed (block not slipping out), set state to "MOVE_XY_HOME_GRIPPED"
                 if time.time() >= self.state_start_time + 10:
-                    #self.state_step('MOVE_XY_HOME_GRIPPED')
-                    pass
-
-            elif self.state == "MOVE_XY_HOME_GRIPPED":
-            # move gripper in xy to get to home position
-                if self.state_first_run:
-
-                    # self.x = self.HOME_POSITION[0]
-                    # self.y = self.HOME_POSITION[1]
-                    # self.z = self.z
-                    # self.Rx = 0
-                    # self.Ry = 0
-                    # self.Rz =
-                    # pose = [self.x, self.y ,self.z] + self.get_quaternion_from_euler(self.Rx, self.Ry, self.Rz)
-                    # self.send_arm_pose_cmd(pose)
-
-                    self.state_first_run = False
-            # if switches still pressed (block not slipping out), set state to "GRIPPED_DWELL"
-                if time.time() >= self.state_start_time + 10:
                     #self.state_step('MOVE_XY_STACK_1')
                     pass
+
+            # elif self.state == "MOVE_XY_HOME_GRIPPED":
+            # # move gripper in xy to get to home position
+            #     if self.state_first_run:
+            #
+            #         # self.x = self.HOME_POSITION[0] * 1000
+            #         # self.y = self.HOME_POSITION[1] * 1000
+            #         # self.z = self.z
+            #         # self.Rx = 0
+            #         # self.Ry = 0
+            #         # self.Rz =
+            #         # pose = [self.x, self.y ,self.z] + self.get_quaternion_from_euler(self.Rx, self.Ry, self.Rz)
+            #         # self.send_arm_pose_cmd(pose)
+            #
+            #         self.state_first_run = False
+            # # if switches still pressed (block not slipping out), set state to "GRIPPED_DWELL"
+            #     if time.time() >= self.state_start_time + 10:
+            #         #self.state_step('MOVE_XY_STACK_1')
+            #         pass
 
             elif self.state == "MOVE_XY_STACK_1":
             # move gripper to xy location of where brick is to be stacked, + offset
@@ -414,7 +449,7 @@ class Arm(object):
 
                     # self.x = self.x
                     # self.y = self.y
-                    # self.z = self.HOME_POSITION[2]
+                    # self.z = self.HOME_POSITION[2] * 1000
                     # self.Rx = self.Rx
                     # self.Ry = self.Ry
                     # self.Rz = self.Rz
@@ -431,8 +466,8 @@ class Arm(object):
             # move gripper in xy to get to home position
                 if self.state_first_run:
 
-                    # self.x = self.HOME_POSITION[0]
-                    # self.y = self.HOME_POSITION[1]
+                    # self.x = self.HOME_POSITION[0] * 1000
+                    # self.y = self.HOME_POSITION[1] * 1000
                     # self.z = self.z
                     # self.Rx = 0
                     # self.Ry = 0
@@ -452,10 +487,58 @@ class Arm(object):
             # if still unsuccessful, exit and get human intervention
                 pass
 
+
+
+def test_pose_from_list(pose_list):
+    wpose = geometry_msgs.msg.Pose()
+    wpose.position.x = pose_list[0] / 1000 # convert mm to m
+    wpose.position.y = pose_list[1] / 1000
+    wpose.position.z = pose_list[2] / 1000
+    wpose.orientation.x = pose_list[3]
+    wpose.orientation.y = pose_list[4]
+    wpose.orientation.z = pose_list[5]
+    wpose.orientation.w = pose_list[6]
+
+    return wpose
+
+def test_get_quaternion_from_euler(roll, pitch, yaw):
+    qx = np.sin(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) - np.cos(roll / 2) * np.sin(pitch / 2) * np.sin(yaw / 2)
+    qy = np.cos(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2) + np.sin(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2)
+    qz = np.cos(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2) - np.sin(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2)
+    qw = np.cos(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) + np.sin(roll / 2) * np.sin(pitch / 2) * np.sin(yaw / 2)
+    return [qx, qy, qz, qw]
+
+
 if __name__ == "__main__":
 
     UR5 = MoveGroupPythonIntefaceTutorial()
-    arm = Arm(COM_port='COM4', stack_number=1, UR5_object=UR5)
-    arm.main()
+
+    wpose = geometry_msgs.msg.Pose()
+    wpose.orientation.x =-0.9239
+    wpose.orientation.y = 0.3827
+    wpose.orientation.z = 0.0
+    wpose.orientation.w = 0.0
+    wpose.position.x = 0.4
+    wpose.position.y = -0.2	
+    wpose.position.z = 0.5
+
+
+    waypoints_1 = []
+    waypoints_1.append(copy.deepcopy(wpose))
+
+    cartesian_plan, fraction = UR5.plan_cartesian_path(waypoints=waypoints_1)
+
+
+    #test_list = [0.75, 0.075, 0.25, 0, 0, 0]
+    #print(test_get_quaternion_from_euler(0, 0, 0))
+
+
+    print('test')
+    raw_input()
+    UR5.execute_plan(cartesian_plan)
+    print('test2')
+    raw_input()
+    #arm = Arm(COM_port='COM4', stack_number=1, UR5_object=UR5)
+    #arm.main()
 
 				

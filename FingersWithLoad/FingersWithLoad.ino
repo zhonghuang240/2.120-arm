@@ -50,11 +50,11 @@ double push_thresh_1=936.1, push_thresh_2=879.8;
 
 ///////Serial Output/////////////////////////////////
 //#define MATLAB_SERIAL_READ
-#define Serial_Print
+//#define Serial_Print
 #ifdef Serial_Print
 //De_Bug_Button=true;
 #endif
-
+#define Python_Serial
 void setup() {
   Serial.begin(115200);
 
@@ -230,7 +230,17 @@ void loop() {
     Serial.println(load_2_reading);
 #endif
   loop_time = (micros() - timer) / 1000000.0;
+
+#ifdef Python_Serial
+    Serial.print(load_1_reading);
+    Serial.print(' ');
+    Serial.print(load_2_reading);
+    Serial.print(' ');
+    Serial.println(expanded);
+#endif
+
 }
+
 
 ///////FINGERS OPENING AND CLOSING FUNCTIONS//////////////
 //////////////////////////////////////////////////////////
