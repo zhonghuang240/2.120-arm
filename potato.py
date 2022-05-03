@@ -2,13 +2,13 @@ import numpy as np
 import time
 import serial
 from move_group_python_interface_tutorial_w_gripper_wo_custom_topic import *
-import sys, select, tty, termios
+# import sys, select, tty, termios
 # import potato_cv
 
 class Arm(object):
     """Robot arm"""
 
-    def __init__(self, COM_port, stack_number, UR5_object, calibration):
+    def __init__(self, COM_port, stack_number, UR5_object, calibration, cal_move):
         ### instance variables ###
 
         # constants
@@ -43,8 +43,10 @@ class Arm(object):
         self.HOME_POSITION = [500, -600, 450, 0, 0, 0]
 
         # calibration position - zero coordinate of CV function
-        self.CAL_POSITION = [518, 395, 450, 0, 0, -(np.pi/2)]
+        # self.CAL_POSITION = [518, 395, 200, 0, 0, -(np.pi/2)]
+        self.CAL_POSITION = [518-100, 395-100, 200, 0, 0, -(np.pi / 2)]
         self.calibration_flag = calibration
+        self.calibration_move_flag = cal_move
 
         # command coordinates
         self.x = self.HOME_POSITION[0]
@@ -276,16 +278,16 @@ class Arm(object):
         raw_input()
         self.UR5_object.execute_plan(cartesian_plan)
 
-    def getKey(self):
-        tty.setraw(sys.stdin.fileno())
-        rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
-        if rlist:
-            key = sys.stdin.read(1)
-        else:
-            key = ''
-        settings = termios.tcgetattr(sys.stdin)
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
-        return key
+    # def getKey(self):
+    #     tty.setraw(sys.stdin.fileno())
+    #     rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
+    #     if rlist:
+    #         key = sys.stdin.read(1)
+    #     else:
+    #         key = ''
+    #     settings = termios.tcgetattr(sys.stdin)
+    #     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+    #     return key
 
     def manual_send_arm_pose_cmd(self):
         # sends position target to arm
@@ -307,7 +309,7 @@ class Arm(object):
         time.sleep(0.2)
 
     def get_target_brick(self):
-        result = potato_cv.main(self.april_tag_data, self.calibration_flag)
+        result = potato_cv.main(self.april_tag_data, self.calibration_flag, self.calibration_move_flag)
         self.x = self.CAL_POSITION[0] - result[1]
         self.y = self.CAL_POSITION[1] - result[0]
         self.next_z = self.BASE_HEIGHT + (self.BRICK_HEIGHT * (result[2]-1))
@@ -328,9 +330,9 @@ class Arm(object):
 
             # if significant load detected on gripper and limit switches are not pressed, ERROR, stop
 
-            key = self.getKey()
-            if key == 'o':
-                self.state_step('MANUAL_CONTROL')
+            # key = self.getKey()
+            # if key == 'o':
+            #     self.state_step('MANUAL_CONTROL')
 
             if self.state == "INIT":
                 # initializations, calibrations etc
@@ -377,12 +379,12 @@ class Arm(object):
                 # self.send_arm_pose_cmd()
 
                 if time.time() >= self.state_start_time + 1:
-                    if self.calibration_flag:
-                        self.state_step('CALIBRATION')
+                    if self.calibration_flag and self.calibration_move_flag:
+                        self.state_step('CALIBRATION_MOVE')
                     else:
                         self.state_step('EMPTY_DWELL')
 
-            elif self.state == "CALIBRATION":
+            elif self.state == "CALIBRATION_MOVE":
                 # gripper in calibration position
                 if self.state_first_run:
                     self.x = self.CAL_POSITION[0]
@@ -395,9 +397,44 @@ class Arm(object):
                     calibration_step_flag = True
                     self.state_first_run = False
 
-                if time.time() >= self.state_start_time + 4 and calibration_step_flag:
-                    self.april_tag_data = potato_cv.main(self.april_tag_data, self.calibration_flag)
+                if time.time() >= self.state_start_time + 1 and calibration_step_flag:
+                    print('press enter to get calibration move')
+                    raw_input()
+                    results_cal_move = potato_cv.main(self.april_tag_data, self.calibration_flag, self.calibration_move_flag)
+                    self.x -= results_cal_move[1]
+                    self.y -= results_cal_move[0]
+                    self.send_arm_pose_cmd()
                     calibration_step_flag = False
+
+                if time.time() >= self.state_start_time + 2:
+                    self.calibration_move_flag = False
+                    print('NEW CALIBRATION POSITION:')
+                    print([self.x, self.y, self.z, self.Rx, self.Ry, self.Rz])
+                    self.state_step('CALIBRATION')
+
+
+            elif self.state == "CALIBRATION":
+                # gripper in calibration position
+                if self.state_first_run:
+                    # self.x = self.CAL_POSITION[0]
+                    # self.y = self.CAL_POSITION[1]
+                    # self.z = self.CAL_POSITION[2]
+                    # self.Rx = self.CAL_POSITION[3]
+                    # self.Ry = self.CAL_POSITION[4]
+                    # self.Rz = self.CAL_POSITION[5]
+                    # self.send_arm_pose_cmd()
+                    # calibration_step_flag = True
+
+                    self.april_tag_data = potato_cv.main(self.april_tag_data, self.calibration_flag, self.calibration_move_flag)
+                    calibration_step_flag = False
+                    print('APRIL TAG DATA')
+                    print(self.april_tag_data)
+
+                    self.state_first_run = False
+                #
+                # if time.time() >= self.state_start_time + 4 and calibration_step_flag:
+                #     self.april_tag_data = potato_cv.main(self.april_tag_data, self.calibration_flag)
+                #     calibration_step_flag = False
 
                 if time.time() >= self.state_start_time + 1:
                     self.calibration_flag = False
@@ -633,7 +670,7 @@ def test_get_quaternion_from_euler(roll_in, pitch_in, yaw_in):
 if __name__ == "__main__":
 
     UR5 = MoveGroupPythonIntefaceTutorial()
-    arm = Arm(COM_port=None, stack_number=1, UR5_object=UR5, calibration=True)
+    arm = Arm(COM_port=None, stack_number=1, UR5_object=UR5, calibration=True, cal_move=True)
     arm.main()
 
     # wpose = geometry_msgs.msg.Pose()
