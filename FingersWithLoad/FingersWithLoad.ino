@@ -15,15 +15,16 @@ ezButton Left_LS(LS_lft);
 
 
 
-
 ///Sets up pins and variables for finger linear actuators
 int left_finger_pin=12, right_finger_pin=13,right_brake=8,left_brake=9;
 int open_speed=255,close_speed=255,close_time=1000, open_time=1000;
-bool expanded, Front_pressed, Back_pressed, Right_pressed, Left_pressed;
+bool expanded, Front_pressed, Back_pressed, Right_pressed, Left_pressed, override_expand, override_collapse;
 bool printed=false, De_Bug_Button=false;
 int skip;
 
 int Front_state;
+
+char serial_data;
 
 
 /////Load Cells//////
@@ -46,7 +47,7 @@ float load_1_reading,load_2_reading;
 int mating_safety_factor=1.1;
 double push_thresh_1=936.1, push_thresh_2=879.8;
 
-
+#define period_us 10000
 
 ///////Serial Output/////////////////////////////////
 //#define MATLAB_SERIAL_READ
@@ -75,7 +76,7 @@ void setup() {
 
 
 ////SetUp Load Cells///
-  push_thresh_1=600, push_thresh_2=600;
+  push_thresh_1=2000, push_thresh_2=2000;
   float calibrationValue_1=-205.38; // calibration value load cell 1
   float calibrationValue_2=-218.79; // calibration value load cell 2
   LoadCell_1.begin();
@@ -97,11 +98,13 @@ void setup() {
   }
   LoadCell_1.setCalFactor(calibrationValue_1); // user set calibration value (float)
   LoadCell_2.setCalFactor(calibrationValue_2); // user set calibration value (float)
-  
+
+  delay(50);
 }
 
 void loop() {
 
+  if (micros() - timer >= period_us) {
   timer = micros();
   
   // put your main code here, to run repeatedly:
@@ -109,6 +112,19 @@ void loop() {
   Back_LS.loop();
   Right_LS.loop();
   Left_LS.loop();
+
+  // read serial data if available
+  if(Serial.available() > 0){
+    serial_data = Serial.read();
+
+    if(serial_data == '1' && expanded == false){
+      override_expand = true;
+    }
+
+    else if(serial_data == '0' && expanded == true){
+      override_collapse = true;
+    }
+  }
 
 ////////Load Cells ready to get data then grabs data/////
   static boolean newDataReady=0;
@@ -194,7 +210,7 @@ void loop() {
           printed=false;
           }
       
-      if (Front_pressed && Back_pressed && Right_pressed && Left_pressed && !expanded){
+      if ((Front_pressed && Back_pressed && Right_pressed && Left_pressed && !expanded) || override_expand){
         #ifdef Serial_Print
         Serial.println("We've been pressed");
         #endif
@@ -205,14 +221,16 @@ void loop() {
         Left_pressed=false;
         expandfingers();
         expanded=true;
+        override_expand = false;
         delay(1200);
     }
-    if (expanded && load_1_reading>push_thresh_1*mating_safety_factor&& load_2_reading>push_thresh_2*mating_safety_factor ){
+    if ((expanded && load_1_reading>push_thresh_1*mating_safety_factor&& load_2_reading>push_thresh_2*mating_safety_factor ) || override_collapse){
       #ifdef Serial_Print
       Serial.println("Freedom");
       #endif
       collapsefingers();
       expanded=false;
+      override_collapse = false;
       delay(1000); //allow time for fingers to collapse
     }
 #ifdef MATLAB_SERIAL_READ
@@ -229,7 +247,6 @@ void loop() {
     Serial.print(" load 2 ");
     Serial.println(load_2_reading);
 #endif
-  loop_time = (micros() - timer) / 1000000.0;
 
 #ifdef Python_Serial
     Serial.print(load_1_reading);
@@ -237,9 +254,11 @@ void loop() {
     Serial.print(load_2_reading);
     Serial.print(' ');
     Serial.println(expanded);
+    Serial.flush();
 #endif
-
-}
+  }
+  loop_time = (micros() - timer) / 1000000.0;
+ }
 
 
 ///////FINGERS OPENING AND CLOSING FUNCTIONS//////////////
