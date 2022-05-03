@@ -2,8 +2,8 @@ import numpy as np
 import time
 import serial
 from move_group_python_interface_tutorial_w_gripper_wo_custom_topic import *
+import sys, select, tty, termios
 # import potato_cv
-# import sys, select, tty, termios
 
 class Arm(object):
     """Robot arm"""
@@ -267,16 +267,16 @@ class Arm(object):
         raw_input()
         self.UR5_object.execute_plan(cartesian_plan)
 
-    # def getKey(self):
-    #     tty.setraw(sys.stdin.fileno())
-    #     rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
-    #     if rlist:
-    #         key = sys.stdin.read(1)
-    #     else:
-    #         key = ''
-    #
-    #     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
-    #     return key
+    def getKey(self):
+        tty.setraw(sys.stdin.fileno())
+        rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
+        if rlist:
+            key = sys.stdin.read(1)
+        else:
+            key = ''
+        settings = termios.tcgetattr(sys.stdin)
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+        return key
 
     def manual_send_arm_pose_cmd(self):
         # sends position target to arm
@@ -319,8 +319,9 @@ class Arm(object):
 
             # if significant load detected on gripper and limit switches are not pressed, ERROR, stop
 
-            # if keyboard.is_pressed('o'):
-            #     self.state_step('MANUAL_CONTROL')
+            key = self.getKey()
+            if key == 'o':
+                self.state_step('MANUAL_CONTROL')
 
             if self.state == "INIT":
                 # initializations, calibrations etc
@@ -401,7 +402,6 @@ class Arm(object):
             #     if self.state_first_run:
             #         self.state_first_run = False
             #
-            #     key = self.getKey()
             #     # keyboard control
             #
             #     if key == 'w':
