@@ -1,21 +1,8 @@
-import serial
-import geometry_msgs.msg
-import sys
-import copy
-import rospy
-import moveit_commander
-import moveit_msgs.msg
-import geometry_msgs.msg
-from math import pi
-from std_msgs.msg import String
-from moveit_commander.conversions import pose_to_list
-## END_SUB_TUTORIAL
-from time import sleep
-from move_group_python_interface_tutorial_w_gripper_wo_custom_topic import all_close, MoveGroupPythonIntefaceTutorial
-
 import numpy as np
 import keyboard
 import time
+from move_group_python_interface_tutorial_w_gripper_wo_custom_topic import *
+# import potato_cv
 
 class Arm(object):
     """Robot arm"""
@@ -31,7 +18,7 @@ class Arm(object):
         self.BRICK_STACKED_HEIGHT = 64.8  # brick height not including protrusions [mm]
         self.BRICK_WIDTH = 97.5  # width of brick [mm]
         self.BRICK_LENGTH = 195  # length of brick [mm]
-        self.BASE_HEIGHT = 200 #262 # z height of table surface, assuming gripper is holding brick
+        self.BASE_HEIGHT = 139 # z height of table surface, assuming gripper is holding brick
 
         # offsets for stacking bricks
         self.X_OFFSET = 701.57
@@ -52,10 +39,10 @@ class Arm(object):
         self.RZ_Y_AXIS = - np.pi/2 # across table
 
         # home position - gripper up and out of view of camera
-        self.HOME_POSITION = [200, -600, 300, 0, 0, 0]
+        self.HOME_POSITION = [500, -600, 400, 0, 0, 0]
 
         # calibration position - zero coordinate of CV function
-        self.CAL_POSITION = [200, -100, 300, 0, 0, -(np.pi/2)]
+        self.CAL_POSITION = [200, 100, 300, 0, 0, -(np.pi/2)]
         self.calibration_flag = calibration
 
         # command coordinates
@@ -66,7 +53,6 @@ class Arm(object):
         self.Ry = self.HOME_POSITION[4]
         self.Rz = self.HOME_POSITION[5]
         self.next_z = self.z
-        self.stack_coordinates = self.next_stack_position()
 
         # state initialization
         self.state = "INIT"
@@ -88,6 +74,7 @@ class Arm(object):
 
         # number of bricks stacked (1 - 16)
         self.stack_number = stack_number
+        self.stack_coordinates = self.next_stack_position()
 
         # UR5 object
         self.UR5_object = UR5_object
@@ -292,6 +279,13 @@ class Arm(object):
         self.UR5_object.execute_plan(cartesian_plan)
         time.sleep(0.2)
 
+    # def get_target_brick(self):
+    #     result = potato_cv.main()
+    #     self.x = self.CAL_POSITION[0] + result[1]
+    #     self.y = self.CAL_POSITION[1] + result[0]
+    #     self.next_z = self.BASE_HEIGHT + (self.BRICK_HEIGHT * (result[2]-1))
+    #     self.Rz = (np.pi / 2) + result[3]
+
     ### state machine ###
     def main(self):
 
@@ -307,8 +301,8 @@ class Arm(object):
 
             # if significant load detected on gripper and limit switches are not pressed, ERROR, stop
 
-            if keyboard.is_pressed('o'):
-                self.state_step('MANUAL_CONTROL')
+            # if keyboard.is_pressed('o'):
+            #     self.state_step('MANUAL_CONTROL')
 
             if self.state == "INIT":
                 # initializations, calibrations etc
@@ -325,35 +319,34 @@ class Arm(object):
                     self.send_arm_pose_cmd()
                     self.state_first_run = False
 
-                self.x += 300
-                self.y += 1100
-                raw_input()
-                self.send_arm_pose_cmd()
+                # self.x += 300
+                # self.y += 1100
+                # raw_input()
+                # self.send_arm_pose_cmd()
 
-                self.z -= 200
-                raw_input()
-                self.send_arm_pose_cmd()
+                # self.z -= 200
+                # raw_input()
+                # self.send_arm_pose_cmd()
 
-                self.z += 200
-                raw_input()
-                self.send_arm_pose_cmd()
+                # self.z += 200
+                # raw_input()
+                # self.send_arm_pose_cmd()
 
-                self.y -= 1100
-                raw_input()
-                self.send_arm_pose_cmd()
+                # self.y -= 1100
+                # raw_input()
+                # self.send_arm_pose_cmd()
 
-                self.z -= 200
-                raw_input()
-                self.send_arm_pose_cmd()
+                # self.z -= 200
+                # raw_input()
+                # self.send_arm_pose_cmd()
 
-                self.z -= 50
-                raw_input()
-                self.send_arm_pose_cmd()
+                # self.z -= 50
+                # raw_input()
+                # self.send_arm_pose_cmd()
 
-                self.z += 250
-                raw_input()
-                self.send_arm_pose_cmd()
-
+                # self.z += 250
+                # raw_input()
+                # self.send_arm_pose_cmd()
 
                 if time.time() >= self.state_start_time + 1:
                     if self.calibration_flag:
@@ -374,56 +367,53 @@ class Arm(object):
                     self.state_first_run = False
                 # set state to MOVE_XY_GRIP
                 if time.time() >= self.state_start_time + 1:
-                    self.calibration_flag = False
-                    self.state_step('INIT')
+                    # self.calibration_flag = False
+                    self.state_step('EMPTY_DWELL')
 
-            elif self.state == "MANUAL CONTROL":
-                if self.state_first_run:
-                    self.state_first_run = False
+            # elif self.state == "MANUAL CONTROL":
+            #     if self.state_first_run:
+            #         self.state_first_run = False
 
-                # keyboard control
-                if keyboard.is_pressed('w'):
-                    self.x -= self.X_STEP
-                if keyboard.is_pressed('a'):
-                    self.x -= self.Y_STEP
-                if keyboard.is_pressed('s'):
-                    self.x += self.X_STEP
-                if keyboard.is_pressed('d'):
-                    self.x += self.Y_STEP
-                if keyboard.is_pressed('u'):
-                    self.x += self.Z_STEP
-                if keyboard.is_pressed('j'):
-                    self.x -= self.Z_STEP
-                if keyboard.is_pressed('q'):
-                    self.x -= self.RZ_STEP
-                if keyboard.is_pressed('e'):
-                    self.x += self.RZ_STEP
+            #     # keyboard control
+            #     if keyboard.is_pressed('w'):
+            #         self.x -= self.X_STEP
+            #     if keyboard.is_pressed('a'):
+            #         self.x -= self.Y_STEP
+            #     if keyboard.is_pressed('s'):
+            #         self.x += self.X_STEP
+            #     if keyboard.is_pressed('d'):
+            #         self.x += self.Y_STEP
+            #     if keyboard.is_pressed('u'):
+            #         self.x += self.Z_STEP
+            #     if keyboard.is_pressed('j'):
+            #         self.x -= self.Z_STEP
+            #     if keyboard.is_pressed('q'):
+            #         self.x -= self.RZ_STEP
+            #     if keyboard.is_pressed('e'):
+            #         self.x += self.RZ_STEP
 
-                self.manual_send_arm_pose_cmd()
+            #     self.manual_send_arm_pose_cmd()
 
 
-                if keyboard.is_pressed('p'):
-                    self.state_step(self.prev_state)
-
+            #     if keyboard.is_pressed('p'):
+            #         self.state_step(self.prev_state)
 
             elif self.state == "EMPTY_DWELL":
                 # gripper at home position with no brick
                 if self.state_first_run:
-                    if self.stack_number >= 16:
+                    if self.stack_number > 16:
                         print('FINISHED')
                         time.sleep(99)
                     # take image(s) of workspace
                     # determine location + orientation of brick to be picked up
-                    # self.x =
-                    # self.y =
-                    self.next_z = 150
-                    # self.Rz =
+                    # self.get_target_brick()
                     self.x = 300
                     self.y = 500
-                    self.Rz = np.pi/4
+                    self.next_z = 150
+                    self.Rz = 0
                     self.state_first_run = False
                 # set state to MOVE_XY_GRIP
-                if time.time() >= self.state_start_time + 5:
+                if time.time() >= self.state_start_time + 1:
                     self.state_step('MOVE_XY_GRIP')
 
 
@@ -475,6 +465,7 @@ class Arm(object):
                     self.stack_coordinates = self.next_stack_position()
                     self.x = self.stack_coordinates[0] + self.stack_x_offset
                     self.y = self.stack_coordinates[1] + self.stack_y_offset
+                    # print(self.x, self.stack_coordinates)
                     self.Rz = self.stack_coordinates[5]
                     self.send_arm_pose_cmd()
                     self.state_first_run = False
@@ -547,7 +538,6 @@ class Arm(object):
             # try previous action again for set number of retries
             # if still unsuccessful, exit and get human intervention
                 pass
-
 
 
 def test_pose_from_list(pose_list):
