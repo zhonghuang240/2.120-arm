@@ -1,8 +1,9 @@
 import numpy as np
-import keyboard
 import time
+import serial
 from move_group_python_interface_tutorial_w_gripper_wo_custom_topic import *
 # import potato_cv
+# import sys, select, tty, termios
 
 class Arm(object):
     """Robot arm"""
@@ -61,12 +62,18 @@ class Arm(object):
         self.state_first_run = True
 
         # arduino
-        # print('SETTING UP ARDUINO')
-        # self.arduino = serial.Serial('COM3', baudrate=115200, timeout=1)
-        # self.arduino.flushInput()
-        # self.arduino.flushOutput()
-        # time.sleep(10)
-        # print('ARDUINO INITIALIZED')
+        if COM_port is not None:
+            print('SETTING UP ARDUINO')
+            self.arduino = serial.Serial()
+            self.arduino.port = COM_port
+            self.arduino.baudrate = 115200
+            self.arduino.timeout = 1
+            self.arduino.open()
+            time.sleep(3)
+            print('ARDUINO INITIALIZED')
+        else:
+            self.arduino = None
+
         self.grip_state = False
         self.force_reading_1 = 0 # load cell reading
         self.force_reading_2 = 0
@@ -109,8 +116,8 @@ class Arm(object):
     #     except:
     #         return False
     #
-    # def write(self, x):
-    #     self.arduino.write(str(x).encode())
+    def write_arduino(self, x):
+        self.arduino.write(str(x).encode())
 
     def next_stack_position(self):
         if self.stack_number == 1 or self.stack_number == 9:
@@ -260,6 +267,17 @@ class Arm(object):
         raw_input()
         self.UR5_object.execute_plan(cartesian_plan)
 
+    # def getKey(self):
+    #     tty.setraw(sys.stdin.fileno())
+    #     rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
+    #     if rlist:
+    #         key = sys.stdin.read(1)
+    #     else:
+    #         key = ''
+    #
+    #     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+    #     return key
+
     def manual_send_arm_pose_cmd(self):
         # sends position target to arm
         # if len(pose_list) == 7:
@@ -382,29 +400,30 @@ class Arm(object):
             # elif self.state == "MANUAL CONTROL":
             #     if self.state_first_run:
             #         self.state_first_run = False
-
+            #
+            #     key = self.getKey()
             #     # keyboard control
-            #     if keyboard.is_pressed('w'):
+            #
+            #     if key == 'w':
             #         self.x -= self.X_STEP
-            #     if keyboard.is_pressed('a'):
+            #     if key == 'a':
             #         self.x -= self.Y_STEP
-            #     if keyboard.is_pressed('s'):
+            #     if key == 's':
             #         self.x += self.X_STEP
-            #     if keyboard.is_pressed('d'):
+            #     if key == 'd':
             #         self.x += self.Y_STEP
-            #     if keyboard.is_pressed('u'):
+            #     if key == 'u':
             #         self.x += self.Z_STEP
-            #     if keyboard.is_pressed('j'):
+            #     if key == 'j':
             #         self.x -= self.Z_STEP
-            #     if keyboard.is_pressed('q'):
+            #     if key == 'q':
             #         self.x -= self.RZ_STEP
-            #     if keyboard.is_pressed('e'):
+            #     if key == 'e':
             #         self.x += self.RZ_STEP
-
+            #
             #     self.manual_send_arm_pose_cmd()
-
-
-            #     if keyboard.is_pressed('p'):
+            #
+            #     if key == 'p':
             #         self.state_step(self.prev_state)
 
             elif self.state == "EMPTY_DWELL":
@@ -453,8 +472,18 @@ class Arm(object):
                     self.send_arm_pose_cmd()
                     self.state_first_run = False
                 if time.time() >= self.state_start_time + 1:
-                    self.state_step('MOVE_Z_HOME_GRIPPED')
+                    if self.arduino is not None:
+                        self.state_step('GRIP')
+                    elif self.arduino is None :
+                        self.state_step('MOVE_Z_HOME_GRIPPED')
 
+            elif self.state == "GRIP":
+            # descend gripper to brick to be picked up
+                if self.state_first_run:
+                    self.write_arduino(1)
+                    self.state_first_run = False
+                if time.time() >= self.state_start_time + 1:
+                    self.state_step('MOVE_Z_HOME_GRIPPED')
 
             elif self.state == "MOVE_Z_HOME_GRIPPED":
             # move gripper up to home position z plane
@@ -511,6 +540,17 @@ class Arm(object):
                     self.state_first_run = False
                 if time.time() >= self.state_start_time + 1:
                     self.stack_number = self.stack_number + 1
+                    if self.arduino is not None:
+                        self.state_step('RELEASE')
+                    elif self.arduino is None :
+                        self.state_step('MOVE_Z_HOME_EMPTY')
+
+            elif self.state == "RELEASE":
+            # descend gripper to brick to be picked up
+                if self.state_first_run:
+                    self.write_arduino(0)
+                    self.state_first_run = False
+                if time.time() >= self.state_start_time + 1:
                     self.state_step('MOVE_Z_HOME_EMPTY')
 
 

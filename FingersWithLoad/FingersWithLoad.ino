@@ -55,7 +55,7 @@ double push_thresh_1=936.1, push_thresh_2=879.8;
 #ifdef Serial_Print
 //De_Bug_Button=true;
 #endif
-#define Python_Serial
+//#define Python_Serial
 void setup() {
   Serial.begin(115200);
 
@@ -76,7 +76,7 @@ void setup() {
 
 
 ////SetUp Load Cells///
-  push_thresh_1=2000, push_thresh_2=2000;
+  push_thresh_1=600, push_thresh_2=600;
   float calibrationValue_1=-205.38; // calibration value load cell 1
   float calibrationValue_2=-218.79; // calibration value load cell 2
   LoadCell_1.begin();

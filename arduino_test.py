@@ -36,15 +36,15 @@ if __name__ == "__main__":
         print('write')
         x = int(input())
         write(ard,x)
-        ard.write('1'.encode())
+        # ard.write('1'.encode())
         time.sleep(1)
         # if x == '1':
         #     write(ard, 1)
         #     ard.flush()
         # # line = read(ard)
         # #line = ard.readline()
-        #
-        if x == '2':
-            write(ard, 0)
-            ard.flush()
+        # #
+        # if x == '2':
+        #     write(ard, 0)
+        #     ard.flush()
 
