@@ -3,12 +3,12 @@ import time
 import serial
 from move_group_python_interface_tutorial_w_gripper_wo_custom_topic import *
 # import sys, select, tty, termios
-# import potato_cv
+import potato_cv
 
 class Arm(object):
     """Robot arm"""
 
-    def __init__(self, COM_port, stack_number, UR5_object, calibration, cal_move):
+    def __init__(self, COM_port, stack_number, UR5_object, calibration, cal_move, april_tag_data, cal_position):
         ### instance variables ###
 
         # constants
@@ -19,11 +19,11 @@ class Arm(object):
         self.BRICK_STACKED_HEIGHT = 64.8  # brick height not including protrusions [mm]
         self.BRICK_WIDTH = 97.5  # width of brick [mm]
         self.BRICK_LENGTH = 195  # length of brick [mm]
-        self.BASE_HEIGHT = 139 # z height of table surface, assuming gripper is holding brick
+        self.BASE_HEIGHT = 138 # z height of table surface, assuming gripper is holding brick
 
         # offsets for stacking bricks
-        self.X_OFFSET = 701.57 + 50
-        self.Y_OFFSET = -12.92
+        self.X_OFFSET = 739.32 #701.57 + 50
+        self.Y_OFFSET = 31.91 #-12.92
         self.Z_OFFSET = 0
         self.Rx_OFFSET = 0
         self.Ry_OFFSET = 0
@@ -40,11 +40,11 @@ class Arm(object):
         self.RZ_Y_AXIS = - np.pi/2 # across table
 
         # home position - gripper up and out of view of camera
-        self.HOME_POSITION = [500, -600, 450, 0, 0, 0]
+        self.HOME_POSITION = [500, -500, 450, 0, 0, 0]
 
         # calibration position - zero coordinate of CV function
         # self.CAL_POSITION = [518, 395, 200, 0, 0, -(np.pi/2)]
-        self.CAL_POSITION = [518-100, 395-100, 200, 0, 0, -(np.pi / 2)]
+        self.CAL_POSITION = cal_position
         self.calibration_flag = calibration
         self.calibration_move_flag = cal_move
 
@@ -95,7 +95,7 @@ class Arm(object):
         self.RZ_STEP = 0.01
 
         # april tag
-        self.april_tag_data = (0,0,0,0)
+        self.april_tag_data = april_tag_data
 
     def state_step(self, next_state):
         print(next_state)
@@ -235,12 +235,13 @@ class Arm(object):
     def get_quaternion_from_euler(self, roll_in, pitch_in, yaw_in):
         roll = roll_in
 
-        pitch = pitch_in + np.pi
-        yaw = yaw_in + np.pi * 0.75
+        # trash robot
+        # pitch = pitch_in + np.pi
+        # yaw = yaw_in + np.pi * 0.75
 
         # # competition robot
-        # pitch = pitch_in + np.pi * 0.5
-        # yaw = yaw_in + np.pi * 0.25
+        pitch = pitch_in + np.pi * 0.5
+        yaw = yaw_in + np.pi * 0.25
 
         qx = np.sin(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) - np.cos(roll / 2) * np.sin(pitch / 2) * np.sin(yaw / 2)
         qy = np.cos(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2) + np.sin(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2)
@@ -304,7 +305,6 @@ class Arm(object):
         waypoints = []
         waypoints.append(copy.deepcopy(pose))
         cartesian_plan, fraction = self.UR5_object.plan_cartesian_path(waypoints=waypoints)
-        # raw_input()
         self.UR5_object.execute_plan(cartesian_plan)
         time.sleep(0.2)
 
@@ -349,35 +349,6 @@ class Arm(object):
                     self.send_arm_pose_cmd()
                     self.state_first_run = False
 
-                # self.x += 300
-                # self.y += 1100
-                # raw_input()
-                # self.send_arm_pose_cmd()
-
-                # self.z -= 200
-                # raw_input()
-                # self.send_arm_pose_cmd()
-
-                # self.z += 200
-                # raw_input()
-                # self.send_arm_pose_cmd()
-
-                # self.y -= 1100
-                # raw_input()
-                # self.send_arm_pose_cmd()
-
-                # self.z -= 200
-                # raw_input()
-                # self.send_arm_pose_cmd()
-
-                # self.z -= 50
-                # raw_input()
-                # self.send_arm_pose_cmd()
-
-                # self.z += 250
-                # raw_input()
-                # self.send_arm_pose_cmd()
-
                 if time.time() >= self.state_start_time + 1:
                     if self.calibration_flag and self.calibration_move_flag:
                         self.state_step('CALIBRATION_MOVE')
@@ -401,8 +372,9 @@ class Arm(object):
                     print('press enter to get calibration move')
                     raw_input()
                     results_cal_move = potato_cv.main(self.april_tag_data, self.calibration_flag, self.calibration_move_flag)
-                    self.x -= results_cal_move[1]
-                    self.y -= results_cal_move[0]
+                    print(results_cal_move)
+                    self.x += results_cal_move[1]
+                    self.y += results_cal_move[0]
                     self.send_arm_pose_cmd()
                     calibration_step_flag = False
 
@@ -670,7 +642,15 @@ def test_get_quaternion_from_euler(roll_in, pitch_in, yaw_in):
 if __name__ == "__main__":
 
     UR5 = MoveGroupPythonIntefaceTutorial()
-    arm = Arm(COM_port=None, stack_number=1, UR5_object=UR5, calibration=True, cal_move=True)
+
+    april_tuple = (643.02429390212126, 368.66560771526474, -0.039388701930644025, 703.0)
+    ## ADD 82.5 MM TO THE X COORDINATE!!!!!
+    cal_pos_list = [505.61828597608309, 323.16689006508881, 200, 0, 0, -1.5707963267948966]
+
+    arm = Arm(COM_port=None, stack_number=1, UR5_object=UR5, calibration=True, cal_move=True,
+        april_tag_data=april_tuple,
+        cal_position=cal_pos_list)
+
     arm.main()
 
     # wpose = geometry_msgs.msg.Pose()
@@ -694,11 +674,7 @@ if __name__ == "__main__":
     # print(test_list[0] / 1000)
     #
 
-    # print('test')
-    # raw_input()
-    # UR5.execute_plan(cartesian_plan)
-    # print('test2')
-    # raw_input()
+
 
 
 				

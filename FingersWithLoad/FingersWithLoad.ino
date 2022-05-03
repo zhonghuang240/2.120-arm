@@ -76,7 +76,7 @@ void setup() {
 
 
 ////SetUp Load Cells///
-  push_thresh_1=600, push_thresh_2=600;
+  push_thresh_1=900, push_thresh_2=900;
   float calibrationValue_1=-205.38; // calibration value load cell 1
   float calibrationValue_2=-218.79; // calibration value load cell 2
   LoadCell_1.begin();
