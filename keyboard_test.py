@@ -1,8 +1,6 @@
-import keyboard
 import dummy_module
+a = 5
 
 if __name__=='__main__':
 
-    while True:
-        dummy_module.main()
-        print(a_var)
+    dummy_module.increment()

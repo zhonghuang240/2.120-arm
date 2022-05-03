@@ -43,7 +43,7 @@ class Arm(object):
         self.HOME_POSITION = [500, -600, 450, 0, 0, 0]
 
         # calibration position - zero coordinate of CV function
-        self.CAL_POSITION = [500, 100, 450, 0, 0, -(np.pi/2)]
+        self.CAL_POSITION = [518, 395, 450, 0, 0, -(np.pi/2)]
         self.calibration_flag = calibration
 
         # command coordinates
@@ -91,6 +91,9 @@ class Arm(object):
         self.Y_STEP = 1
         self.Z_STEP = 1
         self.RZ_STEP = 0.01
+
+        # april tag
+        self.april_tag_data = (0,0,0,0)
 
     def state_step(self, next_state):
         print(next_state)
@@ -229,8 +232,14 @@ class Arm(object):
 
     def get_quaternion_from_euler(self, roll_in, pitch_in, yaw_in):
         roll = roll_in
-        pitch = pitch_in + np.pi * 0.5
-        yaw = yaw_in + np.pi * 0.25
+
+        pitch = pitch_in + np.pi
+        yaw = yaw_in + np.pi * 0.75
+
+        # # competition robot
+        # pitch = pitch_in + np.pi * 0.5
+        # yaw = yaw_in + np.pi * 0.25
+
         qx = np.sin(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) - np.cos(roll / 2) * np.sin(pitch / 2) * np.sin(yaw / 2)
         qy = np.cos(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2) + np.sin(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2)
         qz = np.cos(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2) - np.sin(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2)
@@ -297,12 +306,12 @@ class Arm(object):
         self.UR5_object.execute_plan(cartesian_plan)
         time.sleep(0.2)
 
-    # def get_target_brick(self):
-    #     result = potato_cv.main()
-    #     self.x = self.CAL_POSITION[0] + result[1]
-    #     self.y = self.CAL_POSITION[1] + result[0]
-    #     self.next_z = self.BASE_HEIGHT + (self.BRICK_HEIGHT * (result[2]-1))
-    #     self.Rz = (np.pi / 2) + result[3]
+    def get_target_brick(self):
+        result = potato_cv.main(self.april_tag_data, self.calibration_flag)
+        self.x = self.CAL_POSITION[0] - result[1]
+        self.y = self.CAL_POSITION[1] - result[0]
+        self.next_z = self.BASE_HEIGHT + (self.BRICK_HEIGHT * (result[2]-1))
+        self.Rz = -(np.pi / 2) + result[3]
 
     ### state machine ###
     def main(self):
@@ -383,10 +392,15 @@ class Arm(object):
                     self.Ry = self.CAL_POSITION[4]
                     self.Rz = self.CAL_POSITION[5]
                     self.send_arm_pose_cmd()
+                    calibration_step_flag = True
                     self.state_first_run = False
-                # set state to MOVE_XY_GRIP
+
+                if time.time() >= self.state_start_time + 4 and calibration_step_flag:
+                    self.april_tag_data = potato_cv.main(self.april_tag_data, self.calibration_flag)
+                    calibration_step_flag = False
+
                 if time.time() >= self.state_start_time + 1:
-                    # self.calibration_flag = False
+                    self.calibration_flag = False
                     self.state_step('EMPTY_DWELL')
 
             # elif self.state == "HOME_Z":
@@ -434,11 +448,11 @@ class Arm(object):
                         time.sleep(99)
                     # take image(s) of workspace
                     # determine location + orientation of brick to be picked up
-                    # self.get_target_brick()
-                    self.x = 300
-                    self.y = 500
-                    self.next_z = 150
-                    self.Rz = 0
+                    self.get_target_brick()
+                    # self.x = 300
+                    # self.y = 500
+                    # self.next_z = 150
+                    # self.Rz = 0
                     self.state_first_run = False
                 # set state to MOVE_XY_GRIP
                 if time.time() >= self.state_start_time + 1:
@@ -619,7 +633,7 @@ def test_get_quaternion_from_euler(roll_in, pitch_in, yaw_in):
 if __name__ == "__main__":
 
     UR5 = MoveGroupPythonIntefaceTutorial()
-    arm = Arm(COM_port='COM4', stack_number=9, UR5_object=UR5, calibration=True)
+    arm = Arm(COM_port=None, stack_number=1, UR5_object=UR5, calibration=True)
     arm.main()
 
     # wpose = geometry_msgs.msg.Pose()

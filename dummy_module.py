@@ -3,8 +3,9 @@ import time
 
 a_var = 0
 
-def increment(a):
-    print(a-1)
+def increment():
+    global a
+    print(a)
 
 def decrement(a):
     print(a+1)
