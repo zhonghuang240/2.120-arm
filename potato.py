@@ -21,7 +21,7 @@ class Arm(object):
         self.BASE_HEIGHT = 139 # z height of table surface, assuming gripper is holding brick
 
         # offsets for stacking bricks
-        self.X_OFFSET = 701.57
+        self.X_OFFSET = 701.57 + 50
         self.Y_OFFSET = -12.92
         self.Z_OFFSET = 0
         self.Rx_OFFSET = 0
@@ -39,10 +39,10 @@ class Arm(object):
         self.RZ_Y_AXIS = - np.pi/2 # across table
 
         # home position - gripper up and out of view of camera
-        self.HOME_POSITION = [500, -600, 400, 0, 0, 0]
+        self.HOME_POSITION = [500, -600, 450, 0, 0, 0]
 
         # calibration position - zero coordinate of CV function
-        self.CAL_POSITION = [200, 100, 300, 0, 0, -(np.pi/2)]
+        self.CAL_POSITION = [500, 100, 450, 0, 0, -(np.pi/2)]
         self.calibration_flag = calibration
 
         # command coordinates
@@ -122,7 +122,7 @@ class Arm(object):
             Rz = self.RZ_X_AXIS
             self.stack_x_offset = 0
             self.stack_y_offset = 0
-            if self.state == 9:
+            if self.stack_number == 9:
                 z = z + self.BRICK_STACKED_HEIGHT
 
         elif self.stack_number == 2 or self.stack_number == 10:
@@ -134,7 +134,7 @@ class Arm(object):
             Rz = self.RZ_Y_AXIS
             self.stack_x_offset = 0
             self.stack_y_offset = - self.STACK_XY_OFFSET_VALUE
-            if self.state == 10:
+            if self.stack_number == 10:
                 z = z + self.BRICK_STACKED_HEIGHT
 
         elif self.stack_number == 3 or self.stack_number == 11:
@@ -146,7 +146,7 @@ class Arm(object):
             Rz = self.RZ_Y_AXIS
             self.stack_x_offset = 0
             self.stack_y_offset = - self.STACK_XY_OFFSET_VALUE
-            if self.state == 11:
+            if self.stack_number == 11:
                 z = z + self.BRICK_STACKED_HEIGHT
 
         elif self.stack_number == 4 or self.stack_number == 12:
@@ -158,7 +158,7 @@ class Arm(object):
             Rz = self.RZ_X_AXIS
             self.stack_x_offset = 0
             self.stack_y_offset = - self.STACK_XY_OFFSET_VALUE
-            if self.state == 12:
+            if self.stack_number == 12:
                 z = z + self.BRICK_STACKED_HEIGHT
 
         elif self.stack_number == 5 or self.stack_number == 13:
@@ -170,7 +170,7 @@ class Arm(object):
             Rz = self.RZ_X_AXIS
             self.stack_x_offset = - self.STACK_XY_OFFSET_VALUE
             self.stack_y_offset = 0
-            if self.state == 13:
+            if self.stack_number == 13:
                 z = z + self.BRICK_STACKED_HEIGHT
 
         elif self.stack_number == 6 or self.stack_number == 14:
@@ -182,7 +182,7 @@ class Arm(object):
             Rz = self.RZ_Y_AXIS
             self.stack_x_offset = 0
             self.stack_y_offset = self.STACK_XY_OFFSET_VALUE
-            if self.state == 14:
+            if self.stack_number == 14:
                 z = z + self.BRICK_STACKED_HEIGHT
 
         elif self.stack_number == 7 or self.stack_number == 15:
@@ -194,7 +194,7 @@ class Arm(object):
             Rz = self.RZ_Y_AXIS
             self.stack_x_offset = 0
             self.stack_y_offset = self.STACK_XY_OFFSET_VALUE
-            if self.state == 15:
+            if self.stack_number == 15:
                 z = z + self.BRICK_STACKED_HEIGHT
 
         elif self.stack_number == 8 or self.stack_number == 16:
@@ -206,7 +206,7 @@ class Arm(object):
             Rz = self.RZ_X_AXIS
             self.stack_x_offset = - self.STACK_XY_OFFSET_VALUE
             self.stack_y_offset = self.STACK_XY_OFFSET_VALUE
-            if self.state == 16:
+            if self.stack_number == 16:
                 z = z + self.BRICK_STACKED_HEIGHT
 
         # offset of coordinates
@@ -370,6 +370,15 @@ class Arm(object):
                     # self.calibration_flag = False
                     self.state_step('EMPTY_DWELL')
 
+            # elif self.state == "HOME_Z":
+            #     # descend gripper to brick to be picked up + some offset
+            #     if self.state_first_run:
+            #         self.z = self.HOME_POSITION[2]
+            #         self.send_arm_pose_cmd()
+            #         self.state_first_run = False
+            #     if time.time() >= self.state_start_time + 1:
+            #         self.state_step('EMPTY_DWELL')
+
             # elif self.state == "MANUAL CONTROL":
             #     if self.state_first_run:
             #         self.state_first_run = False
@@ -529,8 +538,11 @@ class Arm(object):
                     self.state_first_run = False
             # set state to "EMPTY_DWELL"
                 if time.time() >= self.state_start_time + 1:
-                    self.state_step('EMPTY_DWELL')
-                    pass
+                    if self.calibration_flag:
+                        self.state_step('CALIBRATION')
+                    else:
+                        self.state_step('EMPTY_DWELL')
+
 
             elif self.state == "ERROR":
             # look at previous state before error
@@ -567,7 +579,7 @@ def test_get_quaternion_from_euler(roll_in, pitch_in, yaw_in):
 if __name__ == "__main__":
 
     UR5 = MoveGroupPythonIntefaceTutorial()
-    arm = Arm(COM_port='COM4', stack_number=1, UR5_object=UR5, calibration=True)
+    arm = Arm(COM_port='COM4', stack_number=9, UR5_object=UR5, calibration=True)
     arm.main()
 
     # wpose = geometry_msgs.msg.Pose()
